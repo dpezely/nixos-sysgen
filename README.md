@@ -23,14 +23,14 @@ EFI Boot on partition `1`, NixOS to be written to Partition `2` which will
        configuration-nominal.nix \
        configuration-optimal.nix
 
-> Alternatively, on a **new** machine or to **wipe & replace** everything:
->
->    ./partition.sh --uefi --wipe-device=sda
->    ./sysgen.sh \
->       --efi=sda1   --new-efi \
->       --nixos=sda2 --new-nixos \
->       --home=sda4  --new-home --encrypted-home \
->       configuration-[mno]*.nix
+Alternatively, on a **new** machine or to **wipe & replace** everything:
+
+    ./partition.sh --uefi --wipe-device=sda
+    ./sysgen.sh \
+       --efi=sda1   --new-efi \
+       --nixos=sda2 --new-nixos \
+       --home=sda4  --new-home --encrypted-home \
+       configuration-[mno]*.nix
 
 After booting into new NixOS image, deploy Home-Manager for multiple accounts:
 
