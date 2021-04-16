@@ -226,7 +226,7 @@ scripts with privileges.  Instead, each prompts for your password when
 2. Installation utilities for NixOS must be accessible via `$PATH`, such as
    when booting from official NixOS installation media.
 
-## Step 2: Nominal Use of Home Manager
+## Step 2: Nominal Use
 
 Continuing the example with `/dev/sda` and NixOS being written to Partition
 `2` after having installed the *minimal* configuration, and install the
@@ -242,10 +242,9 @@ Note that the config file changed to *nominal.nix*, and the various
 parameters that would have an adverse impact to any file system have been
 removed.
 
-This stage optionally introduces
-[Home-Manager](https://github.com/nix-community/home-manager).
-
-The `--home-manager` option gives you the choice of enabling it now.
+Items added to the resulting `configuration.nix` file might include
+[Home-Manager](https://github.com/nix-community/home-manager), cron jobs,
+other services, virtualization hosts such as VirtualBox, etc.
 
 On a new machine with a freshly created `/home`, there will be nothing to do
 for Home-Manager yet.
@@ -259,9 +258,9 @@ problems in user-land blocking a system upgrade.
 Arguments *for* it often focus on convenience for the end-user because
 updates may be a one-step process, albeit all-or-nothing success/fail.
 
-Upon successful completion and when `--home-manager` has been specified,
-the machine should be ready for the username specified in that `.nix` file
-for basic web, chat and email access.
+Mainly, the definition of "nominal" for your should be based upon having
+enough to be functional for the majority of your tasks.  For many people,
+this might exclude printers because those can introduce a world of hurt.
 
 ## Step 3: Optimal For Daily Work
 
