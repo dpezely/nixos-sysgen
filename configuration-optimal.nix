@@ -5,6 +5,8 @@
 # or when running locally, run ‘nixos-help’ which opens the web browser
 # to a `file:` URL.
 
+#import <nixpkgs> { overlays = [ mfcj870dwlpr mfcj870dw-cupswrapper] };
+
 { config, pkgs, ... }:
 
 {
@@ -82,7 +84,8 @@
 
     # Home-Manager should be installed per-user so that user-land issues can't
     # block OS updates: `nix-shell "<home-manager>" -A install`
-    # FIXME v20.09 as of 2021-04-14, per-user `home-manager` can't be found.
+    # FIXME v20.09 as of 2021-04-14, per-user `home-manager` can't be found
+    # unless its config exists prior to running that command.
     home-manager                # DELETE ME
 
     ntp
@@ -91,6 +94,20 @@
     # microcodeIntel microcodeAmd
   ];
   nixpkgs.config.allowUnfree = true;
+
+  # FIXME: remove after Pull Request has been approved & merged
+  nixpkgs.overlays = [
+    (self: super: {
+      mfcj870dwlpr = super.callPackage
+        /home/build/nixpkgs/pkgs/misc/cups/drivers/mfcj870dwlpr { };
+    })
+
+    (self: super: {
+      mfcj870dw-cupswrapper = super.callPackage
+        /home/build/nixpkgs/pkgs/misc/cups/drivers/mfcj870dwcupswrapper { };
+    })
+  ];
+
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
@@ -118,6 +135,8 @@
       # FIXME other dictionaries? foldoc gcide jargon vera
     };
 
+    ntp.enable = false;         # use cron job for ntpdate instead
+
     openssh = {
       enable = true;
       permitRootLogin = "no";
@@ -130,12 +149,13 @@
       browsedConf = ''
         BrowseRemoteProtocols dnssd cups
       ''; 
+      # https://nixos.wiki/wiki/Printing
+      drivers = [ pkgs.mfcj870dwlpr pkgs.mfcj870dw-cupswrapper ];
       logLevel = "warn";
       startWhenNeeded = false;
       webInterface = false;
     };
-
-    ntp.enable = false;         # use cron job for ntpdate instead
+    system-config-printer.enable = true;
 
     xserver = {
       enable = true;
@@ -160,6 +180,7 @@
   sound.enable = true;
   hardware.pulseaudio.enable = true;
 
+  # FIXME: unable to print test page
   # hardware.printers.ensurePrinters."Brother MFC-J870DW" = {
   #   deviceUri = "socket://192.168.1.250";
   # };

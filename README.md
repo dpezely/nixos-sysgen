@@ -416,13 +416,6 @@ settings managers may mangle contents as these files are being overwritten.
   but may need to manually expand `$HOME`
 - Path to anything installed via configuration.nix would be
   `/run/current-system/sw/bin/`
-### Emacs
-https://www.reddit.com/r/NixOS/comments/mogdox/fastest_way_of_getting_emacs_with_nixmode_during/
-
-For one-off runs:
-
-    nix-shell --packages '(pkgs.emacsPackagesGen pkgs.emacs-nox).emacsWithPackages (f: [f.melpaPackages.nix-mode])'
-
 ### Rust Programming Language
 
 Example: building a release of a Rust language project
@@ -445,50 +438,28 @@ toolchain lags behind official releases from
 
 See Also:
 
+- https://nixos.org/guides/nix-pills/developing-with-nix-shell.html
 - https://notes.srid.ca/rust-nix
 - https://www.reddit.com/r/NixOS/comments/mr394e/how_do_you_install_packages_not_in_nixpkgs/
-
-### Android Dev Kit
-
-Example: build a release of an Android app with embedded Rust-based library
-
-TODO
-
-### Suspicious Software
-
-Example: running Microsoft Teams, Skype or Zoom
-
-While a machine unplugged when not used may be best, followed by a proper
-virtual machine, then perhaps a sandbox like BSD Jails...  
-(And of course you know better than using Docker or LXC containers as a security measure, right?  RIGHT?)  
-A `chroot`'d environment is better than nothing.
-
-NixOS as a better tripwire:  
-A compromised executable leads to checksum comparison failure for early
-detection, which was a commonly used technique in the
-[1990's](https://dl.acm.org/doi/10.1145/191177.191183).
-
-Finally, disposing of dependencies-- or at least destroying a hospitable
-environment in which the potentially compromised app requires to run-- as
-happens when using `nix-shell`...  
-
-The overall attack vector will have been greatly reduced and detection
-heightened.
-
-TODO
 
 ### Printer
 This is an example of adapting an existing NixOS printer driver
 for creating a *similar* one: Brother MFC J470DW vs MFC J870DW
 (i.e., `400` series versus `800`).
 
-There is an existing [lpr driver](https://github.com/NixOS/nixpkgs-channels/blob/nixos-unstable/pkgs/misc/cups/drivers/mfcj470dwlpr/)
+There is an existing [lpr driver](https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/misc/cups/drivers/mfcj470dwlpr/)
 and
-[CUPS wrapper](https://github.com/NixOS/nixpkgs-channels/blob/nixos-unstable/pkgs/misc/cups/drivers/mfcj470dwcupswrapper/)
+[CUPS wrapper](https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/misc/cups/drivers/mfcj470dwcupswrapper/)
 for the other printer since 2016.
 
 NixOS packages may be created from Debian packages, which is how that one
 functions.
+
+It's worthwhile to learn about
+[Writing Nix Expressions](https://nixos.org/manual/nix/stable/#chap-writing-nix-expressions)
+first and then
+[Quick Start to Adding a Package](https://nixos.org/manual/nixpkgs/stable/#chap-quick-start)
+to Nixpkgs, which is largely what occurs below.
 
 Files to be substituted come from the manufacturer's official support website for
 [MFC
@@ -507,11 +478,11 @@ Values within the Nix package to be substituted:
 
 Tasks:
 
-1. Clone entire [nixpkgs-channels](https://github.com/NixOS/nixpkgs-channels)
+1. Clone entire [nixpkgs](https://github.com/NixOS/nixpkgs)
    repo, which as of the eve of NixOS 21.05 is roughly 1 GiB in size:
-   + `git clone https://github.com/NixOS/nixpkgs-channels`
+   + `git clone https://github.com/NixOS/nixpkgs`
 2. Replicate selected drivers as placeholders for new ones:
-   + `cd nixpkgs-channels/pkgs/misc/cups/drivers/`
+   + `cd nixpkgs/pkgs/misc/cups/drivers/`
    + `cp -pr mfcj470dwlpr/ mfcj870dwlpr/`
    + `cp -pr mfcj470dwcupswrapper/ mfcj870dwcupswrapper/`
 3. Modify:
@@ -531,8 +502,52 @@ Tasks:
    + Compute SHA256 sums:  
      `shasum -a 256 mfcj870dw*`
    + Substitute checksums manually...
-4. Test locally...
-5. Create Pull Request...
+4. Add to `nixpkgs/pkgs/top-level/all-packages.nix`
+   + Find entries for the existing similar printer as reference
+   + Keep the list sorted
+5. Prepare to build:
+   + Add to or create `~/.config/nixpkgs/config.nix`
+     with `{ allowUnfree = true; }`, as nix-build below advises
+6. First build the `lpr` package because it's a dependency of the other, and
+   use identifiers from `all-packages.nix` rather than their subdirectory names:
+   + `(cd nixpkgs/ && nix-build -A mfcj870dwlpr)`
+   + `(cd nixpkgs/ && nix-build -A mfcj870dw-cupswrapper)`
+   + `nix-store --query /nix/store/*-mfcj870dw-lpr-*.drv`
+   + `nix-store --query /nix/store/*-mfcj870dw-cupswrapper-*.drv`
+7. Optionally, install locally:
+   + `(cd nixpkgs/ && nix-env -f . -iA mfcj870dwlpr)`
+   + `(cd nixpkgs/ && nix-env -f . -iA mfcj870dw-cupswrapper)`
+   + `nix-env --query --installed | grep '^mfc'`
+8. Make available for configuration.nix, which requires an
+   [overlay](https://nixos.wiki/wiki/Overlays):
+   + e.g., add to configuration.nix file:  
+   `nixpkgs.overlays = [ /* ... */ ];`
+   + where the list should contain an entry for each of lpr and cupswrapper,
+     as follows
+   + `(self: super: { mfcj870dwlpr = super.callPackage
+     /home/build/nixpkgs/pkgs/misc/cups/drivers/mfcj870dwlpr { }; })`
+   + `(self: super: { mfcj870dw-cupswrapper = super.callPackage
+     /home/build/nixpkgs/pkgs/misc/cups/drivers/mfcj870dwcupswrapper { }; })`
+   + (n.b., Understand differences between
+     [overlays](https://nixos.org/manual/nixpkgs/stable/#chap-overlays) vs
+     [overriding](https://nixos.org/manual/nixpkgs/stable/#chap-overrides),
+     which are related but distinctly separate approaches)
+9. Update `/etc/nixos/configuration.nix`, and use package
+   identifiers *as named in output of the query* from the earlier step:
+   + Add those names to `printing.drivers` within
+    [configuration-optimal.nix](./configuration-optimal.nix), and you may
+    omit version numbers because only one version will be available
+     e.g., `printing.drivers = [ local.mfcj870dw-lpr local.mfcj870dw-cupswrapper ];`
+10. **FIXME**
+    + For Linux distros other than NixOS, this particular device driver
+      requires manually running a script bundled within the package
+      downloaded from the manufacturer's website
+    + Further work is required for this step to be applied for NixOS
+11. Deploy locally for testing:
+   + `sudo cp -b configuration-optimal.nix /etc/nixos/configuration.nix`
+   + Build: `nixos-rebuild -I local=$HOME/.nix-profile build`
+   + Deploy: `sudo nixos-rebuild switch`
+12. If successful, create a [Pull Request](https://github.com/NixOS/nixpkgs/pulls)
 
 ### Servers
 - OpenSSL lurks as a dependency such as with ipsec-tools
@@ -561,12 +576,9 @@ Referenced directly or indirectly from this document:
   + Use the same set of packages from NixOS for Home-Manager
 - [NixOS Forum](https://discourse.nixos.org/)
 - [Planet NixOS](https://planet.nixos.org/)
+- [Nix Pills](https://nixos.org/guides/nix-pills/)
+- [What is the origin of the name `Nix` ?](https://nixos.wiki/wiki/FAQ#What_is_the_origin_of_the_name_Nix)
 
 Keeping up with the Nixes:
 
 - [weekly.nixos.org](https://weekly.nixos.org/) since 2017
-
-
-See also:
-
-- [home-manager-helper](https://dustinlacewell.github.io/home-manager-helper/)
