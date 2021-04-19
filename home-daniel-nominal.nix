@@ -36,6 +36,7 @@
     #pavucontrols  # For audio
     ripgrep ripgrep-all xsv
     #rustup rustfmt rustracer cargo  # For slightly outdated Rust
+    system-config-printer
     thunderbird
     traceroute
     #virtualboxHeadless
