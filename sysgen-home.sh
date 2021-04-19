@@ -71,6 +71,8 @@ for conf in $conf_files; do
     fi
     echo "sysgen: Examining: $conf"
 
+    # FIXME: confirm `programs.home-manager.enable = true;`
+
     # Extract username and homeDirectory from this config.
     # Use of grep is fragile here, so home.nix older than 20.09 fails:
     username=$(grep -m 1 username $conf | sed 's/^.*"\([^"]*\)".*$/\1/')
@@ -92,11 +94,11 @@ for conf in $conf_files; do
                 nix-channel --add "$HOME_MANAGER_URL" home-manager
                 # Separate `bash -l` processes are equivalent to logout & login
                 bash -l -c 'nix-channel --update'
-                bash -l -c 'nix-shell "<home-manager>" -A install'
                 # Deploy config:
                 cp -b --preserve=timestamps $conf \
                     "$home_path/.config/nixpkgs/home.nix"
                 bash -l -c "home-manager switch"
+                bash -l -c 'nix-shell "<home-manager>" -A install'
             fi
         else                    # same but with `sudo -u $username`
             sudo -u $username mkdir -p "$home_path/.config/nixpkgs"
@@ -106,11 +108,11 @@ for conf in $conf_files; do
                 sudo -u $username \
                     nix-channel --add '$HOME_MANAGER_URL' home-manager
                 sudo -u $username nix-channel --update
-                sudo -u $username --preserve-env=BASH_ENV \
-                    nix-shell '<home-manager>' -A install
                 sudo -u $username cp -b --preserve=timestamps $conf \
                     "$home_path/.config/nixpkgs/home.nix"
                 sudo -u $username --preserve-env=BASH_ENV home-manager switch
+                sudo -u $username --preserve-env=BASH_ENV \
+                    nix-shell '<home-manager>' -A install
             fi
         fi
     fi
